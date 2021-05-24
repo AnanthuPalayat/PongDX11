@@ -11,6 +11,7 @@ struct Render_State
 };
 
 global_variable Render_State render_state;
+#include "platform_common.cpp"
 #include "renderer.cpp"
 
 LRESULT CALLBACK window_callback(HWND hwnd,UINT uMsg,WPARAM wParam,LPARAM lParam){
@@ -65,21 +66,52 @@ int  WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,int nSh
 	
 	HDC hdc = GetDC(window);
 
+	Input input = {};
+
 	while (running) {
 		//Input
 		MSG message;
+
+		for (int i = 0; i < BUTTON_COUNT;i++) {
+			input.buttons[i].changed = false;
+		}
+
 		while (PeekMessage(&message, window, 0, 0, PM_REMOVE)) {
-			TranslateMessage(&message);
-			DispatchMessage(&message);
+
+			switch (message.message)
+			{
+				case WM_KEYUP:
+				case WM_KEYDOWN: {
+					u32 vk_code = (u32)message.wParam;
+					bool isDown = ((message.lParam & (1 << 31)) == 0);
+
+					switch (vk_code)
+					{
+						case VK_UP: {
+							input.buttons[BUTTON_UP].isDown = true;
+							input.buttons[BUTTON_UP].changed = true;
+						} break;
+					}
+
+				} break;
+					
+				default: {
+				TranslateMessage(&message);
+				DispatchMessage(&message);
+				}
+
+				
+			}
 		}
 
 		//Simulate
 		clear_screen(0x000000);
-		draw_rect(0, 0, 1, 1, 0xB0C4DE);
+		if(input.buttons[BUTTON_UP].isDown)
+			draw_rect(0, 0, 1, 1, 0xB0C4DE);
 		draw_rect(30, 30, 5, 5, 0xB0C4DE);
 		draw_rect(-20, -20, 8, 3, 0xB0C4DE);
 		
-
+		
 		//Render
 		StretchDIBits(hdc, 0, 0, render_state.width, render_state.height, 0, 0, render_state.width, render_state.height, render_state.memory, &render_state.bitmapinfo, DIB_RGB_COLORS,SRCCOPY);
 	}
