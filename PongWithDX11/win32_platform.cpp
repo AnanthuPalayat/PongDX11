@@ -13,6 +13,7 @@ struct Render_State
 global_variable Render_State render_state;
 #include "platform_common.cpp"
 #include "renderer.cpp"
+#include "game.cpp"
 
 LRESULT CALLBACK window_callback(HWND hwnd,UINT uMsg,WPARAM wParam,LPARAM lParam){
 	LRESULT result = 0;
@@ -68,6 +69,17 @@ int  WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,int nSh
 
 	Input input = {};
 
+	float delta_time = 0.016666f;
+	LARGE_INTEGER frame_begin_time;
+	QueryPerformanceCounter(&frame_begin_time);
+
+	float performance_frequency; 
+	{
+		LARGE_INTEGER perf;
+		QueryPerformanceFrequency(&perf);
+		performance_frequency = (float)perf.QuadPart;
+	}
+
 	while (running) {
 		//Input
 		MSG message;
@@ -83,14 +95,20 @@ int  WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,int nSh
 				case WM_KEYUP:
 				case WM_KEYDOWN: {
 					u32 vk_code = (u32)message.wParam;
-					bool isDown = ((message.lParam & (1 << 31)) == 0);
+					bool is_down = ((message.lParam & (1 << 31)) == 0);
+
+#define process_buttons(b,vk)\
+case vk:{\
+input.buttons[b].is_down=is_down;\
+input.buttons[b].changed=true;\
+}break;
 
 					switch (vk_code)
 					{
-						case VK_UP: {
-							input.buttons[BUTTON_UP].isDown = true;
-							input.buttons[BUTTON_UP].changed = true;
-						} break;
+						process_buttons(BUTTON_UP, VK_UP);
+						process_buttons(BUTTON_LEFT, VK_LEFT);
+						process_buttons(BUTTON_RIGHT, VK_RIGHT);
+						process_buttons(BUTTON_DOWN, VK_DOWN);
 					}
 
 				} break;
@@ -105,15 +123,15 @@ int  WinMain(HINSTANCE hInstance,HINSTANCE hPrevInstance,LPSTR lpCmdLine,int nSh
 		}
 
 		//Simulate
-		clear_screen(0x000000);
-		if(input.buttons[BUTTON_UP].isDown)
-			draw_rect(0, 0, 1, 1, 0xB0C4DE);
-		draw_rect(30, 30, 5, 5, 0xB0C4DE);
-		draw_rect(-20, -20, 8, 3, 0xB0C4DE);
-		
+		simulate_game(&input,delta_time);
 		
 		//Render
 		StretchDIBits(hdc, 0, 0, render_state.width, render_state.height, 0, 0, render_state.width, render_state.height, render_state.memory, &render_state.bitmapinfo, DIB_RGB_COLORS,SRCCOPY);
+
+		LARGE_INTEGER frame_end_time;
+		QueryPerformanceCounter(&frame_end_time);
+		delta_time = (float)(frame_end_time.QuadPart - frame_begin_time.QuadPart)/performance_frequency;
+		frame_begin_time = frame_end_time;
 	}
 
 }

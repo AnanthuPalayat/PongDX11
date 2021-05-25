@@ -1,6 +1,6 @@
 struct Button_State
 {
-	bool isDown;
+	bool is_down;
 	bool changed;
 };
 
